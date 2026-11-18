@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Simple Photo Editor</title>
+<style>
+  body {
+    font-family: system-ui, Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 { margin-bottom: 10px; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin: 20px 0;
+    max-width: 800px;
+  }
+  label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    min-width: 140px;
+  }
+  input[type="range"] { width: 140px; }
+  button, input[type="file"] {
+    padding: 8px 14px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:hover { background: #444; }
+  canvas {
+    max-width: 90vw;
+    max-height: 70vh;
+    border: 2px solid #333;
+    border-radius: 8px;
+    background: #222;
+  }
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+  <h1>Simple Photo Editor</h1>
+
+  <input type="file" id="upload" accept="image/*">
+
+  <div class="controls">
+    <label>
+      Brightness
+      <input type="range" id="brightness" min="0" max="200" value="100">
+    </label>
+    <label>
+      Contrast
+      <input type="range" id="contrast" min="0" max="200" value="100">
+    </label>
+    <label>
+      Saturation
+      <input type="range" id="saturation" min="0" max="200" value="100">
+    </label>
+  </div>
+
+  <div class="filters">
+    <button onclick="applyFilter('none')">Normal</button>
+    <button onclick="applyFilter('grayscale')">Grayscale</button>
+    <button onclick="applyFilter('sepia')">Sepia</button>
+    <button onclick="applyFilter('invert')">Invert</button>
+    <button onclick="applyFilter('blur')">Blur</button>
+    <button onclick="reset()">Reset</button>
+    <button onclick="download()">Download</button>
+  </div>
+
+  <canvas id="canvas" style="margin-top: 20px;"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const upload = document.getElementById('upload');
+const brightness = document.getElementById('brightness');
+const contrast = document.getElementById('contrast');
+const saturation = document.getElementById('saturation');
+
+let originalImage = null;
+let currentFilter = 'none';
+
+upload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    originalImage = img;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    reset();
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+function draw() {
+  if (!originalImage) return;
+  ctx.filter = 'none';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(originalImage, 0, 0);
+
+  // Apply adjustments
+  ctx.filter = `
+    brightness(${brightness.value}%)
+    contrast(${contrast.value}%)
+    saturate(${saturation.value}%)
+    ${currentFilter === 'blur' ? 'blur(3px)' : ''}
+  `;
+
+  // Re-draw with filters
+  ctx.drawImage(canvas, 0, 0);
+
+  // Extra CSS-like filters
+  if (currentFilter === 'grayscale') ctx.filter = 'grayscale(100%)';
+  else if (currentFilter === 'sepia') ctx.filter = 'sepia(100%)';
+  else if (currentFilter === 'invert') ctx.filter = 'invert(100%)';
+  else if (currentFilter !== 'blur' && currentFilter !== 'none') ctx.filter = 'none';
+
+  if (currentFilter !== 'none' && currentFilter !== 'blur') {
+    ctx.drawImage(canvas, 0, 0);
+  }
+}
+
+function applyFilter(filter) {
+  currentFilter = filter;
+  draw();
+}
+
+function reset() {
+  brightness.value = 100;
+  contrast.value = 100;
+  saturation.value = 100;
+  currentFilter = 'none';
+  draw();
+}
+
+function download() {
+  const link = document.createElement('a');
+  link.download = 'edited-photo.png';
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+// Live updates
+[brightness, contrast, saturation].forEach(input => {
+  input.addEventListener('input', draw);
+});
+</script>
+</body>
+</html>
